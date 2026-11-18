@@ -10,15 +10,15 @@ enum class LinkMode { AUTO, WIFI, USB }
  * Hanya jalur aktif yang dikirimi perintah dan yang telemetrinya diteruskan, jadi tidak ada data ganda.
  */
 class RobotLink(ctx: Context, private val onText: (String) -> Unit) {
-    private val ws = WsLink { if (!usbWins()) onText(it) }
-    private val usb = UsbLink(ctx) { if (usbWins()) onText(it) }
+    private val ws: WsLink = WsLink { if (!usbWins()) onText(it) }
+    private val usb: UsbLink = UsbLink(ctx) { if (usbWins()) onText(it) }
 
     @Volatile var mode = LinkMode.AUTO
     @Volatile private var running = false
 
-    private fun useWs() = mode != LinkMode.USB
-    private fun useUsb() = mode != LinkMode.WIFI
-    private fun usbWins() = useUsb() && (mode == LinkMode.USB || usb.phase() == LinkPhase.UP)
+    private fun useWs(): Boolean = mode != LinkMode.USB
+    private fun useUsb(): Boolean = mode != LinkMode.WIFI
+    private fun usbWins(): Boolean = useUsb() && (mode == LinkMode.USB || usb.phase() == LinkPhase.UP)
 
     /** "USB", "WiFi", atau "-" bila belum ada yang hidup. */
     val activeName: String
