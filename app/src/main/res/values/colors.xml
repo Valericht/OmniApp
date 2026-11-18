@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Palet terang = blok prefers-color-scheme:light di monitor.html -->
+<resources>
+    <color name="omni_bg">#F4F5F7</color>
+    <color name="omni_card">#FFFFFF</color>
+    <color name="omni_fg">#1C1E21</color>
+    <color name="omni_mut">#5F6773</color>
+    <color name="omni_ln">#D6D9DE</color>
+    <color name="omni_soft">#EEF0F3</color>
+    <color name="omni_ok">#15803D</color>
+    <color name="omni_bad">#DC2626</color>
+    <color name="omni_warn">#B45309</color>
+    <color name="omni_acc">#2563EB</color>
+    <color name="omni_stop">#DC2626</color>
+    <color name="omni_motor1">#2563EB</color>
+    <color name="omni_motor2">#16A34A</color>
+    <color name="omni_motor3">#D97706</color>
+    <color name="omni_badge_g">#15803D</color>
+    <color name="omni_badge_y">#CA8A04</color>
+    <color name="omni_badge_r">#DC2626</color>
+    <color name="omni_white">#FFFFFF</color>
+    <color name="omni_run_text">#06210F</color>
+    <color name="ic_launcher_background">#0E1116</color>
+</resources>
