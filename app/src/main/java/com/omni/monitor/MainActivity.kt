@@ -202,7 +202,12 @@ class MainActivity : Activity() {
             val st = s.ps[i]
             val rt = s.rts[i]
             val status = when {
-                st == 2 -> if (s.np == 2) "Memutar badan" else "Jalan ke WP${s.tgt}"
+                st == 2 -> when {
+                    s.np == 2 -> "Memutar badan"
+                    s.np == 3 -> "Verifikasi posisi"
+                    s.av != 0 -> "Menghindar"
+                    else -> "Jalan ke WP${s.tgt}"
+                }
                 rt.isNotEmpty() -> "Idle · " + rt.joinToString("→") { "WP$it" }
                 else -> "Idle · kosong"
             }
@@ -220,7 +225,14 @@ class MainActivity : Activity() {
             btn.enable(!(s.sf != 0 || s.jg != 0 || s.mode == 3 || (st == 0 && rt.isEmpty()) || (anyRun && !run)))
         }
         val r = s.ps.indexOf(2)
-        if (r >= 0) b.preInfo.chip(if (s.np == 2) "ROTATING: memutar ke arah waypoint" else "MOVING: menuju titik", R.color.omni_ok)
+        if (r >= 0) b.preInfo.chip(
+            when {
+                s.np == 2 -> "ROTATING: memutar ke arah waypoint"
+                s.np == 3 -> "VERIFY: mencocokkan bacaan dinding"
+                s.av != 0 -> "AVOID: menghindar rintangan depan"
+                else -> "MOVING: menuju titik"
+            }, R.color.omni_ok,
+        )
         else b.preInfo.chip("IDLE", R.color.omni_mut)
     }
 
@@ -252,7 +264,7 @@ class MainActivity : Activity() {
                     if (s.wpValid(i)) {
                         put(
                             "x ${fmt(w[1])}  y ${fmt(w[2])}  yaw " + (if (s.wpHasYaw(i)) fmt(w[3]) + "°" else "-") +
-                                (if (w[5] > 0f || w[6] > 0f) "\ndinding ${fmt(w[5])} / ${fmt(w[6])}" else ""),
+                                (if (s.wpHasRef(i)) "\ndinding ${fmt(w[5])} / ${fmt(w[6])} / depan ${fmt(w[7])}" else "\ntanpa referensi"),
                             color = mut, size = 0.9f,
                         )
                     } else put("belum disimpan", color = mut, size = 0.9f)
@@ -270,7 +282,13 @@ class MainActivity : Activity() {
                 text = "Di sini"
                 setOnClickListener { st.send("wp_here", "id" to id) }
             }
+            val sync = Button(this, null, 0, R.style.Btn).apply {
+                text = "Sinkron"                       // VERIFY manual: robot diam <= 30 cm dari WP, WP punya referensi dinding
+                enable(s.wpValid(i) && s.wpHasRef(i))
+                setOnClickListener { st.send("wp_sync", "id" to id) }
+            }
             row.addView(go, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
+            row.addView(sync, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
             row.addView(here, LinearLayout.LayoutParams(-2, -2))
             box.addView(row)
         }
@@ -492,6 +510,12 @@ class MainActivity : Activity() {
                 "Kanan ukur / ref" to "${meas(s.wrOk, s.wr)} / ${ref(s.wrr)} cm",
                 "Status" to sp { put(stat, color = color(sc)) },
                 "Retry leg" to s.rty.toString(),
+                "Referensi" to sp { if (s.rst) put("tidak cocok, rekam ulang", color = color(R.color.omni_bad)) else put("-") },
+                "Kecepatan efektif" to "batas ${s.spd} → sat ${s.sat}% → lereng ${fmt(s.slf, 2)} → hindar ${fmt(s.avoidScale, 2)} → ${fmt(s.re)} RPM",
+                "Jarak sisi terkecil" to sp {
+                    put(if (s.smin < 0f) "-" else fmt(s.smin) + " cm", color = color(if (s.smin in 0f..7.99f) R.color.omni_bad else R.color.omni_fg))
+                },
+                "Tiba terakhir" to (if (s.arrQ != 0) s.arrText() else "-"),
                 "Sesi tiba / gagal / retry / koreksi" to s.ss.joinToString(" / "),
             )
         )
@@ -510,7 +534,7 @@ class MainActivity : Activity() {
         b.tPos0.setIfChanged(tile("Posisi x", fmt(s.x) + " cm"))
         b.tPos1.setIfChanged(tile("Posisi y", fmt(s.y) + " cm"))
         b.tPos2.setIfChanged(tile("Yaw", fmt(s.yaw) + "°"))
-        b.tPos3.setIfChanged(tile("Target", if (s.tgt != 0) "WP${s.tgt}" + (if (s.np == 2) " · putar" else "") else "-"))
+        b.tPos3.setIfChanged(tile("Target", if (s.tgt != 0) "WP${s.tgt}" + (if (s.np == 2) " · putar" else if (s.np == 3) " · verifikasi" else "") else "-"))
         b.tPos4.setIfChanged(tile("Kecepatan badan", fmt(s.vx) + " / " + fmt(s.vy)))
         b.tPos5.setIfChanged(tile("Putaran", fmt(s.wz, 2) + " rad/s"))
         b.tvTrail.setIfChanged(
