@@ -20,3 +20,4 @@ APK diunggah sebagai artifact `OmniApp-debug-apk`.
 Gripper (1 solenoid): langkah rute `G1` (ON/jepit) dan `G0` (OFF/lepas) di editor rute, mis. `1,2,G1,3,G0`; tombol Jepit / Lepas manual ada di Lanjutan > Rute preset. Protokol: kode 101/102 di `route_set`, perintah `grip`, telemetri `gp` dan `np` = 4.
 # OmniApp
 # OmniApp
+# OmniApp
