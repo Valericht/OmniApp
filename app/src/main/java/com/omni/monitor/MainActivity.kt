@@ -206,7 +206,7 @@ class MainActivity : Activity() {
                     s.np == 4 -> "Gripper " + (if (s.gp) "menjepit" else "melepas")
                     s.np == 2 -> "Memutar badan"
                     s.np == 3 -> "Verifikasi posisi"
-                    s.av != 0 -> "Menghindar"
+                    s.av != 0 -> Labels.AVN.at(s.av)
                     else -> "Jalan ke WP${s.tgt}"
                 }
                 rt.isNotEmpty() -> "Idle · " + rt.joinToString("→") { Labels.rtLbl(it) }
@@ -231,7 +231,7 @@ class MainActivity : Activity() {
                 s.np == 4 -> "GRIPPER: " + (if (s.gp) "menjepit" else "melepas")
                 s.np == 2 -> "ROTATING: memutar ke arah waypoint"
                 s.np == 3 -> "VERIFY: mencocokkan bacaan dinding"
-                s.av != 0 -> "AVOID: menghindar rintangan depan"
+                s.av != 0 -> "AVOID: " + Labels.AVN.at(s.av)
                 else -> "MOVING: menuju titik"
             }, R.color.omni_ok,
         )

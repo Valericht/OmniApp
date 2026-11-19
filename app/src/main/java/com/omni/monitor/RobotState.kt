@@ -64,6 +64,7 @@ object Labels {
     )
     val ARRV = arrayOf("tanpa verifikasi", "cocok", "TIDAK COCOK")
     // Gripper 1 solenoid: langkah rute 101 = ON (jepit), 102 = OFF (lepas); 1..16 = waypoint
+    val AVN = arrayOf("", "Menahan (memastikan halangan)", "Menggeser ke samping", "Melewati halangan")   // av 0..3
     const val GRIP_ON = 101
     const val GRIP_OFF = 102
     fun rtTok(n: Int) = when (n) { GRIP_ON -> "G1"; GRIP_OFF -> "G0"; else -> n.toString() }
@@ -277,7 +278,7 @@ object Events {
             e += if (s.sv[0] == 1) "Tersimpan ke flash: $w" else "GAGAL menyimpan ke flash: $w. Cek log serial [NVS]"
         }
         if (p.np != s.np && s.np == 3) e += "Memverifikasi posisi terhadap referensi dinding"
-        if (p.av != s.av && s.av != 0) e += "Menghindar rintangan depan"
+        if (p.av != s.av && s.av != 0) e += "Menghindar: " + Labels.AVN.at(s.av)
         if (p.rst != s.rst && s.rst) e += "Referensi dinding tidak cocok: rekam ulang waypoint"
         if (p.arrQ != s.arrQ && s.arrQ != 0) e += "Tiba: " + s.arrText()
         if (p.dn[1] != s.dn[1] && s.dn[0] != 0) e += "Perintah ditolak: " + Labels.DENY.at(s.dn[0])
