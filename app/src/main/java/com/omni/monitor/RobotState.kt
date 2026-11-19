@@ -63,14 +63,11 @@ object Labels {
         "offset melebihi batas", "menghindar (ditahan)",
     )
     val ARRV = arrayOf("tanpa verifikasi", "cocok", "TIDAK COCOK")
-<<<<<<< HEAD
     // Gripper 1 solenoid: langkah rute 101 = ON (jepit), 102 = OFF (lepas); 1..16 = waypoint
     const val GRIP_ON = 101
     const val GRIP_OFF = 102
     fun rtTok(n: Int) = when (n) { GRIP_ON -> "G1"; GRIP_OFF -> "G0"; else -> n.toString() }
     fun rtLbl(n: Int) = when (n) { GRIP_ON -> "Gripper ON"; GRIP_OFF -> "Gripper OFF"; else -> "WP$n" }
-=======
->>>>>>> cb2d5e7ef1e41be5c1de47ea2677fe95d4805ec1
 }
 
 fun Array<String>.at(i: Int): String = getOrElse(i) { "" }
@@ -173,10 +170,7 @@ class Snap(j: JSONObject) {
     // Lapangan v2: slf = faktor tanjakan (sf tetap status pengaman), as = skala hindar, re = RPM efektif, smin = sisi terkecil
     val slf = j.f("slf", 1f); val avoidScale = j.f("as", 1f); val re = j.f("re"); val smin = j.f("smin", -1f)
     val av = j.i("av"); val rst = j.b("rst")
-<<<<<<< HEAD
     val gp = j.b("gp")                                 // keadaan solenoid gripper
-=======
->>>>>>> cb2d5e7ef1e41be5c1de47ea2677fe95d4805ec1
     private val arrO = j.optJSONObject("arr")
     val arrQ = arrO?.i("q") ?: 0                      // naik 1 tiap kejadian tiba
     val arrId = arrO?.i("id") ?: 0

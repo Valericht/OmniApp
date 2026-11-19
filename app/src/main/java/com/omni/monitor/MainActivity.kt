@@ -203,20 +203,13 @@ class MainActivity : Activity() {
             val rt = s.rts[i]
             val status = when {
                 st == 2 -> when {
-<<<<<<< HEAD
                     s.np == 4 -> "Gripper " + (if (s.gp) "menjepit" else "melepas")
-=======
->>>>>>> cb2d5e7ef1e41be5c1de47ea2677fe95d4805ec1
                     s.np == 2 -> "Memutar badan"
                     s.np == 3 -> "Verifikasi posisi"
                     s.av != 0 -> "Menghindar"
                     else -> "Jalan ke WP${s.tgt}"
                 }
-<<<<<<< HEAD
                 rt.isNotEmpty() -> "Idle · " + rt.joinToString("→") { Labels.rtLbl(it) }
-=======
-                rt.isNotEmpty() -> "Idle · " + rt.joinToString("→") { "WP$it" }
->>>>>>> cb2d5e7ef1e41be5c1de47ea2677fe95d4805ec1
                 else -> "Idle · kosong"
             }
             val run = st == 2
@@ -235,10 +228,7 @@ class MainActivity : Activity() {
         val r = s.ps.indexOf(2)
         if (r >= 0) b.preInfo.chip(
             when {
-<<<<<<< HEAD
                 s.np == 4 -> "GRIPPER: " + (if (s.gp) "menjepit" else "melepas")
-=======
->>>>>>> cb2d5e7ef1e41be5c1de47ea2677fe95d4805ec1
                 s.np == 2 -> "ROTATING: memutar ke arah waypoint"
                 s.np == 3 -> "VERIFY: mencocokkan bacaan dinding"
                 s.av != 0 -> "AVOID: menghindar rintangan depan"
@@ -546,11 +536,7 @@ class MainActivity : Activity() {
         b.tPos0.setIfChanged(tile("Posisi x", fmt(s.x) + " cm"))
         b.tPos1.setIfChanged(tile("Posisi y", fmt(s.y) + " cm"))
         b.tPos2.setIfChanged(tile("Yaw", fmt(s.yaw) + "°"))
-<<<<<<< HEAD
         b.tPos3.setIfChanged(tile("Target", if (s.tgt != 0) "WP${s.tgt}" + (if (s.np == 2) " · putar" else if (s.np == 3) " · verifikasi" else if (s.np == 4) " · gripper" else "") else "-"))
-=======
-        b.tPos3.setIfChanged(tile("Target", if (s.tgt != 0) "WP${s.tgt}" + (if (s.np == 2) " · putar" else if (s.np == 3) " · verifikasi" else "") else "-"))
->>>>>>> cb2d5e7ef1e41be5c1de47ea2677fe95d4805ec1
         b.tPos4.setIfChanged(tile("Kecepatan badan", fmt(s.vx) + " / " + fmt(s.vy)))
         b.tPos5.setIfChanged(tile("Putaran", fmt(s.wz, 2) + " rad/s"))
         b.tvTrail.setIfChanged(
