@@ -138,7 +138,11 @@ def telemetry():
              cs=S["cs"], sv=S["sv"], dn=S["dn"], rts=S["rts"], terrain="FLAT", yaw_error=round(0.4 * math.sin(t), 2), stuck=False,
              slip=False, pose_degraded=False, encoder_trust=1.0, pitch=0.5, roll=-0.3,
              pid=dict(kp=1.2, ki=0.3, kd=0.05, status="DONE"), wp=S["wp"],
+<<<<<<< HEAD
              gp=S.get("gp", False), slf=1.0, **{"as": 1.0}, re=round(40 + 5 * math.sin(t), 1), smin=round(14 + 2 * math.sin(t), 1), av=0, rst=False,
+=======
+             slf=1.0, **{"as": 1.0}, re=round(40 + 5 * math.sin(t), 1), smin=round(14 + 2 * math.sin(t), 1), av=0, rst=False,
+>>>>>>> cb2d5e7ef1e41be5c1de47ea2677fe95d4805ec1
              arr=dict(q=2, id=2, n=1, v=1, rl=0.8, rf=-0.5, m=[20.6, -1, 99.5], r=[20, 0, 100]))
     j["zzz_random"] = random.random()
     return json.dumps(j)
