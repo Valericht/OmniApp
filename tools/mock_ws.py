@@ -23,8 +23,8 @@ clients = set()
 S = dict(x=0.0, y=0.0, yaw=0.0, mode=2, tgt=0, jg=0, jog=0, so=True, sf=0, pl=False, pr=False, np=0, nd=0, rty=0,
          cs=[150, 300, 200, 150], ps=[0, 0, 0, 0], tune=0, tw=0, svseq=0, sv=[0, 0, 0], dn=[0, 0], dnseq=0,
          kp=[1.0, 1.0, 1.0], ki=[0.5, 0.5, 0.5], kd=[0.0, 0.0, 0.0], rts=[[1, 2, 3], [2], [3], [4]],
-         wp=[[1, 100, 0, 90, 1, 40, 40], [1, 100, 100, 180, 1, 0, 0], [1, -50, 100, 0, 0, 0, 0], [1, 0, 0, 0, 1, 0, 0]] +
-            [[0, 0, 0, 0, 0, 0, 0] for _ in range(12)],
+         wp=[[1, 100, 0, 90, 1, 40, 40, 0], [1, 100, 100, 180, 1, 0, 0, 0], [1, -50, 100, 0, 0, 0, 0, 0], [1, 0, 0, 0, 1, 0, 0, 0]] +
+            [[0, 0, 0, 0, 0, 0, 0, 0] for _ in range(12)],
          mc=dict(s=0, dir=0, why=0, o=0, i=0, yi=True, dx=0, dy=0, ix=0, iy=0, dyaw=0),
          last_hb=0.0, t0=time.time(), until=0.0, mtq=0.0, tune_until=0.0, connected_at=0.0, sf_done=False)
 SP = [0.0, 0.0, 0.0]
@@ -45,7 +45,7 @@ def cmd(c):
         S.update(mode=2, jog=0, jg=0, tgt=0, ps=[0, 0, 0, 0], np=0)
         if k == "stop_save":
             if S["pl"]: deny(1)
-            elif 1 <= i <= 16: S["wp"][i - 1] = [1, round(S["x"], 1), round(S["y"], 1), round(S["yaw"], 1), 1, 0, 0]; saved(1)
+            elif 1 <= i <= 16: S["wp"][i - 1] = [1, round(S["x"], 1), round(S["y"], 1), round(S["yaw"], 1), 1, 0, 0, 0]; saved(1)
     elif k == "jog":
         d = int(c.get("d", 0))
         if S["sf"]: deny(3)
@@ -70,16 +70,20 @@ def cmd(c):
             if k != "goto": S["ps"][r] = 2
     elif k == "route_set":
         r = int(c.get("r", -1))
-        if 0 <= r < 4: S["rts"][r] = [int(v) for v in c.get("ids", [])][:16]; saved(4)
+        if 0 <= r < 4: S["rts"][r] = [int(v) for v in c.get("ids", []) if 1 <= int(v) <= 16 or int(v) in (101, 102)][:16]; saved(4)
+    elif k == "grip":
+        S["gp"] = bool(c.get("on", False))
     elif k == "wp_here":
         if S["pl"]: deny(1)
-        elif 1 <= i <= 16: S["wp"][i - 1] = [1, round(S["x"], 1), round(S["y"], 1), round(S["yaw"], 1), 1, 30, 30]; saved(1)
+        elif 1 <= i <= 16: S["wp"][i - 1] = [1, round(S["x"], 1), round(S["y"], 1), round(S["yaw"], 1), 1, 30, 30, 0]; saved(1)
     elif k == "wp_set" and 1 <= i <= 16:
         old = S["wp"][i - 1]
         has = isinstance(c.get("yaw"), (int, float))
         S["wp"][i - 1] = [1, c.get("x", 0), c.get("y", 0), c.get("yaw", 0) if has else (old[3] if not c.get("noyaw") else 0),
-                          1 if has or (old[4] and not c.get("noyaw")) else 0, c.get("wallL", 0), c.get("wallR", 0)]; saved(1)
-    elif k == "wp_del" and 1 <= i <= 16: S["wp"][i - 1] = [0] * 7; saved(1)
+                          1 if has or (old[4] and not c.get("noyaw")) else 0, c.get("wallL", 0), c.get("wallR", 0), c.get("wallF", 0)]; saved(1)
+    elif k == "wp_sync":
+        if not (1 <= i <= 16 and S["wp"][i - 1][0] and any(S["wp"][i - 1][5:8])): deny(8)
+    elif k == "wp_del" and 1 <= i <= 16: S["wp"][i - 1] = [0] * 8; saved(1)
     elif k == "safety": S["so"] = bool(c.get("on", True)); saved(5)
     elif k == "resume": S["sf"] = 0
     elif k == "mtest":
@@ -133,7 +137,9 @@ def telemetry():
              ia=40, ic=0xE8, **{"in": False}, mc=S["mc"], sf=S["sf"], so=S["so"], sfv=[1.0, 2.0, round(abs(math.sin(t)) * 30, 1), 55.0],
              cs=S["cs"], sv=S["sv"], dn=S["dn"], rts=S["rts"], terrain="FLAT", yaw_error=round(0.4 * math.sin(t), 2), stuck=False,
              slip=False, pose_degraded=False, encoder_trust=1.0, pitch=0.5, roll=-0.3,
-             pid=dict(kp=1.2, ki=0.3, kd=0.05, status="DONE"), wp=S["wp"])
+             pid=dict(kp=1.2, ki=0.3, kd=0.05, status="DONE"), wp=S["wp"],
+             gp=S.get("gp", False), slf=1.0, **{"as": 1.0}, re=round(40 + 5 * math.sin(t), 1), smin=round(14 + 2 * math.sin(t), 1), av=0, rst=False,
+             arr=dict(q=2, id=2, n=1, v=1, rl=0.8, rf=-0.5, m=[20.6, -1, 99.5], r=[20, 0, 100]))
     j["zzz_random"] = random.random()
     return json.dumps(j)
 

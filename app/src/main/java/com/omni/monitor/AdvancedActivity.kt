@@ -28,6 +28,7 @@ class AdvancedActivity : Activity() {
 
     // R9: rute preset + edit waypoint
     private val routeEdits = ArrayList<SyncEdit>()
+    private lateinit var gripState: TextView
     private val routeStatus = ArrayList<TextView>()
     private val routeRun = ArrayList<Button>()
     private val wpX = ArrayList<SyncEdit>()
@@ -98,6 +99,13 @@ class AdvancedActivity : Activity() {
 
     // ---- R9: rute tiap preset ----
     private fun setupRoutes() {
+        // gripper manual (1 solenoid): Jepit = ON, Lepas = OFF
+        val grip = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(6), 0, dp(6)) }
+        gripState = tv("Gripper: -", 14f, bold = true)
+        grip.addView(gripState, LinearLayout.LayoutParams(0, -2, 1f))
+        grip.addView(btn("Jepit") { st.send("grip", "on" to true); st.log("Gripper: jepit") })
+        grip.addView(btn("Lepas") { st.send("grip", "on" to false); st.log("Gripper: lepas") }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(6) })
+        b.routeBox.addView(grip)
         for (r in 0..3) {
             val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(6), 0, dp(6)) }
             val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -105,7 +113,7 @@ class AdvancedActivity : Activity() {
             val status = tv("", 12f, R.color.omni_mut)
             head.addView(status)
             val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            val et = edit("mis. 1,2,3", InputType.TYPE_CLASS_TEXT)
+            val et = edit("mis. 1,2,G1,3", InputType.TYPE_CLASS_TEXT)
             val run = btn("Jalankan", go = true) {
                 st.send("preset", "i" to r)
                 st.log("Preset ${Labels.PRE[r]}: jalan")
@@ -123,11 +131,14 @@ class AdvancedActivity : Activity() {
     }
 
     private fun saveRoute(r: Int) {
-        val ids = routeEdits[r].e.text.toString().split(Regex("[^0-9]+"))
-            .filter { it.isNotEmpty() }.map { it.toInt() }.filter { it in 1..Snap.MAX_WP }.take(Snap.MAX_WP)
+        // token: angka = waypoint, G1 = gripper ON (jepit), G0 = gripper OFF (lepas), mis. 1,2,G1,3,G0
+        val ids = Regex("[Gg][01]|\\d+").findAll(routeEdits[r].e.text.toString()).map { m ->
+            val t = m.value
+            when { t.equals("G1", true) -> Labels.GRIP_ON; t.equals("G0", true) -> Labels.GRIP_OFF; else -> t.toInt() }
+        }.filter { it in 1..Snap.MAX_WP || it == Labels.GRIP_ON || it == Labels.GRIP_OFF }.take(Snap.MAX_WP).toList()
         st.send("route_set", "r" to r, "ids" to JSONArray(ids))
         routeEdits[r].clean()
-        st.log("Rute preset ${Labels.PRE[r]} dikirim: " + ids.joinToString(",").ifEmpty { "kosong" })
+        st.log("Rute preset ${Labels.PRE[r]} dikirim: " + ids.joinToString(",") { Labels.rtTok(it) }.ifEmpty { "kosong" })
     }
 
     // ---- R9: edit waypoint (x, y, yaw), hapus, tanda ramp ----
@@ -365,12 +376,13 @@ class AdvancedActivity : Activity() {
     private fun render(s: Snap) {
         renderMove(s)
         renderTune(s)
+        gripState.chip("Gripper: " + (if (s.gp) "ON (jepit)" else "OFF"), if (s.gp) R.color.omni_warn else R.color.omni_mut)
         // rute
         for (r in 0..3) {
-            routeEdits[r].push(s.rts[r].joinToString(","))
+            routeEdits[r].push(s.rts[r].joinToString(",") { Labels.rtTok(it) })
             val running = s.ps[r] == 2
             routeStatus[r].chip(
-                if (running) "jalan" else if (s.rts[r].isNotEmpty()) "${s.rts[r].size} titik" else "kosong",
+                if (running) "jalan" else if (s.rts[r].isNotEmpty()) "${s.rts[r].count { it < 100 }} titik" + (if (s.rts[r].any { it >= 100 }) " + gripper" else "") else "kosong",
                 if (running) R.color.omni_ok else R.color.omni_mut,
             )
             routeRun[r].enable(s.rts[r].isNotEmpty() && !s.ps.contains(2))

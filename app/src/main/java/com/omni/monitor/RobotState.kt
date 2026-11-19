@@ -41,6 +41,8 @@ object Labels {
         "robot sedang dipakai (otonom, tes gerak, jalan, atau stick)",
         "posisi tidak pasti (tanjakan): tunggu robot datar dan diam",
         "gagal tiba setelah beberapa percobaan ulang",
+        "terhalang terlalu lama (rintangan di depan)",
+        "sinkron ditolak: WP tanpa referensi dinding, jarak > 30 cm, atau bukan robot diam",
     )
     val SVW = arrayOf("", "waypoint", "PID", "posisi terakhir", "rute", "kecepatan")
     val DIRS = arrayOf("", "Maju", "Mundur", "Kiri", "Kanan")
@@ -56,7 +58,16 @@ object Labels {
     val PRE = arrayOf("A", "B", "C", "D")
     val PADB = arrayOf("A", "B", "X", "Y")
     val PS = arrayOf("IDLE", "", "JALAN")
-    val WST = arrayOf("tidak dipakai", "koreksi aktif", "fallback encoder", "offset melebihi batas")
+    val WST = arrayOf(
+        "tidak dipakai", "koreksi aktif", "fallback encoder (sensor tidak valid / miring samping)",
+        "offset melebihi batas", "menghindar (ditahan)",
+    )
+    val ARRV = arrayOf("tanpa verifikasi", "cocok", "TIDAK COCOK")
+    // Gripper 1 solenoid: langkah rute 101 = ON (jepit), 102 = OFF (lepas); 1..16 = waypoint
+    const val GRIP_ON = 101
+    const val GRIP_OFF = 102
+    fun rtTok(n: Int) = when (n) { GRIP_ON -> "G1"; GRIP_OFF -> "G0"; else -> n.toString() }
+    fun rtLbl(n: Int) = when (n) { GRIP_ON -> "Gripper ON"; GRIP_OFF -> "Gripper OFF"; else -> "WP$n" }
 }
 
 fun Array<String>.at(i: Int): String = getOrElse(i) { "" }
@@ -155,6 +166,25 @@ class Snap(j: JSONObject) {
     val pitch = j.f("pitch"); val roll = j.f("roll"); val yawError = j.f("yaw_error")
     val stuck = j.b("stuck"); val slip = j.b("slip"); val poseDegraded = j.b("pose_degraded")
     val encTrust = j.f("encoder_trust", 1f)
+
+    // Lapangan v2: slf = faktor tanjakan (sf tetap status pengaman), as = skala hindar, re = RPM efektif, smin = sisi terkecil
+    val slf = j.f("slf", 1f); val avoidScale = j.f("as", 1f); val re = j.f("re"); val smin = j.f("smin", -1f)
+    val av = j.i("av"); val rst = j.b("rst")
+    val gp = j.b("gp")                                 // keadaan solenoid gripper
+    private val arrO = j.optJSONObject("arr")
+    val arrQ = arrO?.i("q") ?: 0                      // naik 1 tiap kejadian tiba
+    val arrId = arrO?.i("id") ?: 0
+    val arrN = arrO?.i("n") ?: 0                      // jumlah VERIFY
+    val arrV = arrO?.i("v") ?: 0                      // 0 tanpa verifikasi, 1 cocok, 2 tidak cocok
+    val arrRl = arrO?.f("rl") ?: 0f                   // residual lateral (+ = robot di kanan ref)
+    val arrRf = arrO?.f("rf") ?: 0f                   // residual sepanjang arah (+ = robot di depan ref)
+    val arrM = arrO?.optJSONArray("m").floats(3, -1f) // ukur kiri, kanan, depan
+    val arrR = arrO?.optJSONArray("r").floats(3)      // ref kiri, kanan, depan
+    fun arrText(): String {
+        fun f(i: Int) = if (arrR[i] > 0f) "${if (arrM[i] < 0f) "-" else fmt(arrM[i])}/${fmt(arrR[i])}" else "-"
+        return "WP$arrId · ${Labels.ARRV.at(arrV)} · K ${f(0)} Ka ${f(1)} D ${f(2)} cm · sisa lateral ${fmt(arrRl)} " +
+            "sepanjang ${fmt(arrRf)} cm · verifikasi ${arrN}x"
+    }
     private val pidO = j.optJSONObject("pid")
     val yawKp = pidO?.f("kp") ?: 0f
     val yawKi = pidO?.f("ki") ?: 0f
@@ -184,10 +214,10 @@ class Snap(j: JSONObject) {
     val sv = j.optJSONArray("sv").ints(3)
     val dn = j.optJSONArray("dn").ints(2)
 
-    // waypoint [valid,x,y,yaw,hasYaw,wallL,wallR] x16 dan isi 4 rute
+    // waypoint [valid,x,y,yaw,hasYaw,wallL,wallR,wallF] x16 dan isi 4 rute
     val wp: Array<FloatArray> = run {
         val a = j.optJSONArray("wp")
-        Array(MAX_WP) { i -> a?.optJSONArray(i).floats(7) }
+        Array(MAX_WP) { i -> a?.optJSONArray(i).floats(8) }
     }
     val rts: Array<IntArray> = run {
         val a = j.optJSONArray("rts")
@@ -200,6 +230,7 @@ class Snap(j: JSONObject) {
 
     fun wpValid(i: Int) = wp[i][0] != 0f
     fun wpHasYaw(i: Int) = wp[i][4] != 0f
+    fun wpHasRef(i: Int) = wp[i][5] > 0f || wp[i][6] > 0f || wp[i][7] > 0f
 
     companion object {
         const val MAX_WP = 16
@@ -245,6 +276,10 @@ object Events {
             val w = Labels.SVW.at(s.sv[1])
             e += if (s.sv[0] == 1) "Tersimpan ke flash: $w" else "GAGAL menyimpan ke flash: $w. Cek log serial [NVS]"
         }
+        if (p.np != s.np && s.np == 3) e += "Memverifikasi posisi terhadap referensi dinding"
+        if (p.av != s.av && s.av != 0) e += "Menghindar rintangan depan"
+        if (p.rst != s.rst && s.rst) e += "Referensi dinding tidak cocok: rekam ulang waypoint"
+        if (p.arrQ != s.arrQ && s.arrQ != 0) e += "Tiba: " + s.arrText()
         if (p.dn[1] != s.dn[1] && s.dn[0] != 0) e += "Perintah ditolak: " + Labels.DENY.at(s.dn[0])
         if (p.rty != s.rty && s.rty > 0) e += "Percobaan ulang ke WP${s.tgt}: ke-${s.rty}"
         return e
